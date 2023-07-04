@@ -1,23 +1,9 @@
 package io.shulie.takin.web.biz.service.report.impl;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import javax.annotation.Resource;
-
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.pagehelper.Page;
@@ -28,9 +14,7 @@ import com.pamirs.takin.cloud.entity.dao.report.TReportBusinessActivityDetailMap
 import com.pamirs.takin.cloud.entity.dao.scene.manage.TSceneBusinessActivityRefMapper;
 import com.pamirs.takin.entity.domain.dto.report.*;
 import com.pamirs.takin.entity.domain.entity.report.TpsTargetArray;
-import com.pamirs.takin.entity.domain.vo.TopologyNode;
 import io.shulie.amdb.common.dto.link.topology.LinkEdgeDTO;
-import io.shulie.surge.data.deploy.pradar.parser.utils.Md5Utils;
 import io.shulie.takin.adapter.api.model.request.report.ReportCostTrendQueryReq;
 import io.shulie.takin.adapter.api.model.request.report.ReportMessageCodeReq;
 import io.shulie.takin.adapter.api.model.request.report.ReportMessageDetailReq;
@@ -41,48 +25,33 @@ import io.shulie.takin.cloud.biz.utils.ReportLtDetailOutputUtils;
 import io.shulie.takin.cloud.common.pojo.Pair;
 import io.shulie.takin.cloud.common.utils.TestTimeUtil;
 import io.shulie.takin.cloud.data.dao.report.ReportBusinessActivityDetailDao;
-import io.shulie.takin.cloud.data.dao.report.ReportDao;
 import io.shulie.takin.cloud.data.mapper.mysql.ReportBusinessActivityDetailMapper;
 import io.shulie.takin.cloud.data.mapper.mysql.ReportMapper;
 import io.shulie.takin.cloud.data.model.mysql.ReportBusinessActivityDetailEntity;
 import io.shulie.takin.cloud.data.model.mysql.ReportEntity;
 import io.shulie.takin.cloud.data.model.mysql.SceneBusinessActivityRefEntity;
-import io.shulie.takin.common.beans.page.PagingList;
-import io.shulie.takin.common.beans.response.ResponseResult;
 import io.shulie.takin.utils.json.JsonHelper;
 import io.shulie.takin.web.amdb.api.ApplicationClient;
 import io.shulie.takin.web.amdb.api.TraceClient;
-import io.shulie.takin.web.amdb.bean.query.application.ApplicationNodeQueryDTO;
 import io.shulie.takin.web.amdb.bean.query.trace.TraceMetricsRequest;
-import io.shulie.takin.web.amdb.bean.result.application.ApplicationNodeDTO;
 import io.shulie.takin.web.amdb.bean.result.trace.TraceMetricsAll;
 import io.shulie.takin.web.amdb.enums.LinkRequestResultTypeEnum;
-import io.shulie.takin.web.biz.constant.BusinessActivityRedisKeyConstant;
 import io.shulie.takin.web.biz.pojo.input.report.NodeCompareTargetInput;
 import io.shulie.takin.web.biz.pojo.output.report.*;
-import io.shulie.takin.web.biz.pojo.request.activity.ActivityInfoQueryRequest;
 import io.shulie.takin.web.biz.pojo.request.activity.ReportActivityInfoQueryRequest;
-import io.shulie.takin.web.biz.pojo.request.application.ApplicationEntranceTopologyQueryRequest;
 import io.shulie.takin.web.biz.pojo.response.activity.ActivityResponse;
 import io.shulie.takin.web.biz.pojo.response.activity.ReportActivityResponse;
 import io.shulie.takin.web.biz.pojo.response.application.ApplicationEntranceTopologyResponse;
 import io.shulie.takin.web.biz.pojo.response.report.ReportApplicationSummary;
 import io.shulie.takin.web.biz.service.ActivityService;
-import io.shulie.takin.web.biz.service.LinkTopologyService;
 import io.shulie.takin.web.biz.service.report.*;
 import io.shulie.takin.web.biz.utils.ReportTimeUtils;
 import io.shulie.takin.web.common.common.Response;
 import io.shulie.takin.web.common.constant.ReportConfigConstant;
-import io.shulie.takin.web.common.enums.activity.BusinessTypeEnum;
 import io.shulie.takin.web.common.enums.activity.info.FlowTypeEnum;
-import io.shulie.takin.web.common.enums.config.ConfigServerKeyEnum;
-import io.shulie.takin.web.common.exception.TakinWebException;
-import io.shulie.takin.web.common.exception.TakinWebExceptionEnum;
-import io.shulie.takin.web.common.util.ActivityUtil;
 import io.shulie.takin.web.common.util.DataTransformUtil;
 import io.shulie.takin.web.common.util.RedisClientUtil;
 import io.shulie.takin.web.data.dao.activity.ActivityDAO;
-import io.shulie.takin.web.data.dao.application.ApplicationNodeDAO;
 import io.shulie.takin.web.data.dao.report.ReportApplicationSummaryDAO;
 import io.shulie.takin.web.data.dao.report.ReportBottleneckInterfaceDAO;
 import io.shulie.takin.web.data.dao.report.ReportMachineDAO;
@@ -93,7 +62,6 @@ import io.shulie.takin.web.data.mapper.mysql.ReportMachineMapper;
 import io.shulie.takin.web.data.model.mysql.ApplicationMntEntity;
 import io.shulie.takin.web.data.model.mysql.ReportApplicationSummaryEntity;
 import io.shulie.takin.web.data.model.mysql.ReportMachineEntity;
-import io.shulie.takin.web.data.param.application.ApplicationNodeQueryParam;
 import io.shulie.takin.web.data.param.report.ReportApplicationSummaryQueryParam;
 import io.shulie.takin.web.data.param.report.ReportLocalQueryParam;
 import io.shulie.takin.web.data.result.activity.ActivityResult;
@@ -101,18 +69,26 @@ import io.shulie.takin.web.data.result.report.ReportApplicationSummaryResult;
 import io.shulie.takin.web.data.result.report.ReportBottleneckInterfaceResult;
 import io.shulie.takin.web.data.result.report.ReportMachineResult;
 import io.shulie.takin.web.data.result.report.ReportSummaryResult;
-import io.shulie.takin.web.data.util.ConfigServerHelper;
-import io.shulie.takin.web.ext.entity.UserExt;
 import io.shulie.takin.web.ext.entity.tenant.TenantCommonExt;
 import io.shulie.takin.web.ext.util.WebPluginUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author qianshui
@@ -180,11 +156,21 @@ public class ReportLocalServiceImpl implements ReportLocalService {
     @Autowired
     private ReportTaskService reportTaskService;
 
-    private static final String reportCompareData = "report:vlt:compareData:%s:%s";
+    private static final String reportCompareData = "report:vlt:compareDataV3:%s:%s";
 
     private static final String reportMessageCodeData = "report:vlt:messageCodeData:%s:%s";
 
     private static final String reportMessageDetailData = "report:vlt:messageDetailData:%s:%s:%s";
+
+    private static List<Pair<Integer, Integer>> costList = new ArrayList<>();
+
+    static {
+        costList.add(new Pair<>(0, 200));
+        costList.add(new Pair<>(200, 500));
+        costList.add(new Pair<>(500, 1000));
+        costList.add(new Pair<>(1000, 2000));
+        costList.add(new Pair<>(2000, 999999));
+    }
 
     @Override
     public ReportCountDTO getReportCount(Long reportId) {
@@ -407,8 +393,6 @@ public class ReportLocalServiceImpl implements ReportLocalService {
             return output;
         }
         Map<Long, ReportDetailOutput> reportOutputMap = new HashMap<>();
-        Integer minRt = 0;
-        Integer maxRt = 0;
         String bindRef = null;
         for (int i = 0; i < reportIds.size(); i++) {
             Long reportId = reportIds.get(i);
@@ -477,19 +461,9 @@ public class ReportLocalServiceImpl implements ReportLocalService {
                 trendOut.setRt(trendResp.getRt());
                 trendOut.setSuccessRate(trendResp.getSuccessRate());
                 trendOut.setSa(trendResp.getSa());
-                Pair<Integer, Integer> pair = getMinMaxRt(trendResp.getRt());
-                if (pair != null) {
-                    if (minRt == 0) {
-                        minRt = pair.getKey();
-                    } else {
-                        minRt = Math.min(minRt, pair.getKey());
-                    }
-                    maxRt = Math.max(maxRt, pair.getValue());
-                }
             }
             output.getTrendData().add(trendOut);
         }
-        List<Pair<Integer, Integer>> costList = calcCostLevelByFive(minRt, maxRt);
         //按耗时取请求量
         for (int i = 0; i < reportIds.size(); i++) {
             Long reportId = reportIds.get(i);
@@ -498,12 +472,6 @@ public class ReportLocalServiceImpl implements ReportLocalService {
             }
             String redisKey = String.format(reportCompareData, reportId, businessActivityId);
             if (redisClientUtil.hasKey(redisKey)) {
-                String redisValue = redisClientUtil.getString(redisKey);
-                ReportCompareOutput tempOutput = JSON.parseObject(redisValue, ReportCompareOutput.class);
-                if (tempOutput != null && CollectionUtils.isNotEmpty(tempOutput.getTrendData())) {
-                    output.getTrendData().get(i).getXCost().addAll(tempOutput.getTrendData().get(0).getXCost());
-                    output.getTrendData().get(i).getCount().addAll(tempOutput.getTrendData().get(0).getCount());
-                }
                 continue;
             }
             ReportDetailOutput reportOutput = reportOutputMap.get(reportId);
@@ -521,7 +489,11 @@ public class ReportLocalServiceImpl implements ReportLocalService {
                 costReq.setMaxCost(costPair.getValue());
                 costReq.setTransaction(bindRef);
                 Long costCount = reportMessageService.getRequestCountByCost(costReq);
-                output.getTrendData().get(i).getXCost().add(costPair.getKey() + "-" + costPair.getValue() + "ms");
+                if(costPair.getKey() < 1000) {
+                    output.getTrendData().get(i).getXCost().add(costPair.getKey() + "-" + costPair.getValue() + "ms");
+                } else {
+                    output.getTrendData().get(i).getXCost().add(costPair.getKey() / 1000 + "-" + costPair.getValue() / 1000 + "s");
+                }
                 output.getTrendData().get(i).getCount().add(String.valueOf(costCount));
             }
         }
@@ -1428,25 +1400,25 @@ public class ReportLocalServiceImpl implements ReportLocalService {
         return pair;
     }
 
-    public List<Pair<Integer, Integer>> calcCostLevelByFive(Integer minRt, Integer maxRt) {
-        log.info("calcCostLevelByFive, minRT={}, maxRt={}", minRt, maxRt);
-        List<Pair<Integer, Integer>> pairList = new ArrayList<>();
-        if (minRt == maxRt) {
-            return pairList;
-        }
-        int step = Math.max(1, ((maxRt - minRt) / 5));
-        for (int i = 0; i < 5; i++) {
-            if (i == 4) {
-                pairList.add(new Pair<>(minRt, maxRt));
-            } else {
-                if (minRt + step >= maxRt) {
-                    pairList.add(new Pair<>(minRt, maxRt));
-                    break;
-                }
-                pairList.add(new Pair<>(minRt, minRt + step));
-                minRt += step;
-            }
-        }
-        return pairList;
-    }
+//    public List<Pair<Integer, Integer>> calcCostLevelByFive(Integer minRt, Integer maxRt) {
+//        log.info("calcCostLevelByFive, minRT={}, maxRt={}", minRt, maxRt);
+//        List<Pair<Integer, Integer>> pairList = new ArrayList<>();
+//        if (minRt == maxRt) {
+//            return pairList;
+//        }
+//        int step = Math.max(1, ((maxRt - minRt) / 5));
+//        for (int i = 0; i < 5; i++) {
+//            if (i == 4) {
+//                pairList.add(new Pair<>(minRt, maxRt));
+//            } else {
+//                if (minRt + step >= maxRt) {
+//                    pairList.add(new Pair<>(minRt, maxRt));
+//                    break;
+//                }
+//                pairList.add(new Pair<>(minRt, minRt + step));
+//                minRt += step;
+//            }
+//        }
+//        return pairList;
+//    }
 }
